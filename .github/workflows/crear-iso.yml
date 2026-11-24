@@ -1,0 +1,55 @@
+name: DUTGOS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Instalar herramientas de compilacion
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y live-build
+
+      - name: Configurar Debian Trixie solo terminal
+        run: |
+          mkdir -p ~/mi-debian && cd ~/mi-debian
+          lb config \
+            --architectures arm64 \
+            --distribution trixie \
+            --archive-areas "main contrib non-free-firmware" \
+            --linux-flavours arm64 \
+            --bootloader grub-efi \
+            --debian-installer none
+
+          mkdir -p config/includes.chroot/etc/profile.d config/package-lists
+
+          cat << 'EOF' > config/includes.chroot/etc/profile.d/mis-comandos.sh
+          alias actualizar-paquetes='sudo apt update'
+          alias instalar-updates='sudo apt upgrade -y'
+          alias instalar='sudo apt install'
+          alias buscar='apt search'
+          alias borrar='sudo apt remove'
+          alias limpiar='sudo apt autoremove && sudo apt clean'
+          alias apagar='sudo shutdown -h now'
+          alias reiniciar='sudo reboot'
+
+          actualizar-todo() {
+              sudo apt update && sudo apt upgrade -y
+          }
+          EOF
+
+          chmod +x config/includes.chroot/etc/profile.d/mis-comandos.sh
+          echo "network-manager wireless-tools wpasupplicant nano curl sudo bash-completion" > config/package-lists/mi-lista.list.chroot
+
+      - name: Compilar ISO en la nube
+        run: |
+          cd ~/mi-debian
+          sudo lb build
+
+      - name: Guardar ISO lista para descargar
+        uses: actions/upload-artifact@v4
+        with:
+          name: mi-debian-arm64-iso
+          path: ~/mi-debian/*.iso
