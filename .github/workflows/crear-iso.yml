@@ -5,19 +5,21 @@ on:
 
 jobs:
   build-iso:
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     steps:
-      - name: Instalar herramientas de compilacion
+      - name: Preparar soporte ARM64 y herramientas
         run: |
           sudo apt-get update
-          sudo apt-get install -y live-build
+          sudo apt-get install -y live-build qemu-user-static binfmt-support debian-archive-keyring
 
-      - name: Configurar Debian Trixie solo terminal
+      - name: Configurar Debian Trixie ARM64 solo terminal
         run: |
           mkdir -p ~/mi-debian && cd ~/mi-debian
           lb config \
             --architectures arm64 \
             --distribution trixie \
+            --bootstrap-qemu-arch arm64 \
+            --bootstrap-qemu-static /usr/bin/qemu-aarch64-static \
             --archive-areas "main contrib non-free-firmware" \
             --linux-flavours arm64 \
             --bootloader grub-efi \
@@ -51,5 +53,7 @@ jobs:
       - name: Guardar ISO lista para descargar
         uses: actions/upload-artifact@v4
         with:
-          name: mi-debian-arm64-iso
+          name: dutgos-arm64-iso
           path: ~/mi-debian/*.iso
+
+        
